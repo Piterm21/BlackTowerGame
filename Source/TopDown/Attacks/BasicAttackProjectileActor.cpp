@@ -57,7 +57,7 @@ void ABasicAttackProjectileActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	//Substract from lifetime, and destroy itself when we reach 0
+	//Subtract from lifetime, and destroy itself when we reach 0
 	Lifetime -= DeltaSeconds;
 	if (Lifetime <= 0.0f)
 	{

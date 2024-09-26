@@ -31,7 +31,7 @@ void ATopDownPlayerCharacter::BeginPlay()
 	FGameplayAbilitySpec AbilitySpec = { UBasicAttackAbility::StaticClass(), 1, INDEX_NONE, this };
 	AbilitySystemComponent->GiveAbility(AbilitySpec);
 
-	//Grant charged attack to the player, tiggered by Ability Input ID
+	//Grant charged attack to the player, triggered by Ability Input ID
 	AbilitySpec = { UChargedAttackAbility::StaticClass(), 1, ChargedAttackAbilityInputID, this };
 	AbilitySystemComponent->GiveAbility(AbilitySpec);
 }

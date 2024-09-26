@@ -29,8 +29,8 @@ private:
 	FGameplayAbilityActivationInfo AbilityActivationInfo;
 
 	const float ChargeTimeMax = 5.0f;
-	const float IncerementCount = 8.0f;
-	const float IncementSize = 1.0f / IncerementCount;
+	const float IncrementCount = 8.0f;
+	const float IncrementSize = 1.0f / IncrementCount;
 
 	TObjectPtr<UStaticMesh> WeaponMesh;
 };

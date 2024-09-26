@@ -30,7 +30,7 @@ void UChargedAttackAbility::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 ) 
 {
-	//Save values for Commiting the ability, we commit the abiltity after release of the ability key, so cooldown is applied at that time
+	//Save values for committing the ability, we commit the ability after release of the ability key, so cooldown is applied at that time
 	AbilityHandle = Handle;
 	AbilityActorInfo = ActorInfo;
 	AbilityActivationInfo = ActivationInfo;
@@ -42,7 +42,7 @@ void UChargedAttackAbility::ActivateAbility(
 	}
 
 	//Create task which shows ability charging around the player and waits for ability key to be released
-	UWaitChargedAttackConfirm* Task = UWaitChargedAttackConfirm::WaitChargedAttackConfirm(this, WeaponMesh, ChargeTimeMax, IncerementCount);
+	UWaitChargedAttackConfirm* Task = UWaitChargedAttackConfirm::WaitChargedAttackConfirm(this, WeaponMesh, ChargeTimeMax, IncrementCount);
 	Task->OnRelease.AddUniqueDynamic(this, &ThisClass::OnInputReleased);
 	Task->ReadyForActivation();
 }
@@ -66,7 +66,7 @@ void UChargedAttackAbility::OnInputReleased(float TimeHeld)
 	}
 
 	float ChargeFraction = TimeHeld / ChargeTimeMax;
-	int ChargedIncrements = ChargeFraction / IncementSize;
+	int ChargedIncrements = ChargeFraction / IncrementSize;
 	float RotationIncrement = 360.0f / (int)ChargedIncrements;
 	int IncrementIndex = 0;
 
