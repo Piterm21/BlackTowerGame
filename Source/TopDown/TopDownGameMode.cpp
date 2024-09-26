@@ -25,7 +25,7 @@ ATopDownGameMode::ATopDownGameMode()
 		PlayerControllerClass = PlayerControllerBPClass.Class;
 	}
 
-	// set default pawn class to our Blueprinted character
+	//Set HUD to asset
 	static ConstructorHelpers::FClassFinder<AHUD> HUDClassToSet(TEXT("/Game/TopDown/Blueprints/BP_HUD"));
 	if (HUDClassToSet.Class != nullptr)
 	{

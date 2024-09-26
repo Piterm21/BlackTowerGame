@@ -8,6 +8,7 @@
 
 UBasicAttackAbility::UBasicAttackAbility()
 {
+	//Setup the ability
 	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
 	AbilityTags.AddTag(TagsManager.RequestGameplayTag("Ability.Attack"));
@@ -33,12 +34,14 @@ void UBasicAttackAbility::ActivateAbility(
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 
+	//Spawn projectile at player location and rotation, set it's owner to Actor which started the ability
 	ABasicAttackProjectileActor* Projectile = GetWorld()->SpawnActor<ABasicAttackProjectileActor>(TopDownPlayerCharacter->GetActorLocation(), TopDownPlayerCharacter->GetActorRotation());
 	Projectile->Owner = TopDownPlayerCharacter;
 
 	FGameplayEffectContextHandle EffectContext = TopDownPlayerCharacter->GetAbilitySystemComponent()->MakeEffectContext();
 	EffectContext.AddSourceObject(this);
 
+	//Create damage effect spec to be applied by the projectile
 	FGameplayEffectSpecHandle EffectHandle = TopDownPlayerCharacter->GetAbilitySystemComponent()->MakeOutgoingSpec(UDamage::StaticClass(), 1, EffectContext);
 	if (EffectHandle.IsValid())
 	{

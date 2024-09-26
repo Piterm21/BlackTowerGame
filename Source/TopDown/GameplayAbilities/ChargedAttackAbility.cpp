@@ -9,6 +9,7 @@
 
 UChargedAttackAbility::UChargedAttackAbility()
 {
+	//Setup ability
 	UGameplayTagsManager& TagsManager = UGameplayTagsManager::Get();
 
 	AbilityTags.AddTag(TagsManager.RequestGameplayTag("Ability.AttackHeavy"));
@@ -17,6 +18,7 @@ UChargedAttackAbility::UChargedAttackAbility()
 
 	CooldownGameplayEffectClass = UChargedAttackCooldown::StaticClass();
 
+	//Find weapon asset to use when spawning projectiles/visual representation of charging
 	ConstructorHelpers::FObjectFinder<UStaticMesh> ObjectFinder(TEXT("/Game/Weapon_Pack/Mesh/Weapons/Weapons_Kit/SM_Dagger_1"));
 	WeaponMesh = ObjectFinder.Object;
 }
@@ -28,6 +30,7 @@ void UChargedAttackAbility::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 ) 
 {
+	//Save values for Commiting the ability, we commit the abiltity after release of the ability key, so cooldown is applied at that time
 	AbilityHandle = Handle;
 	AbilityActorInfo = ActorInfo;
 	AbilityActivationInfo = ActivationInfo;
@@ -38,6 +41,7 @@ void UChargedAttackAbility::ActivateAbility(
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 
+	//Create task which shows ability charging around the player and waits for ability key to be released
 	UWaitChargedAttackConfirm* Task = UWaitChargedAttackConfirm::WaitChargedAttackConfirm(this, WeaponMesh, ChargeTimeMax, IncerementCount);
 	Task->OnRelease.AddUniqueDynamic(this, &ThisClass::OnInputReleased);
 	Task->ReadyForActivation();
@@ -45,11 +49,13 @@ void UChargedAttackAbility::ActivateAbility(
 
 void UChargedAttackAbility::OnInputReleased(float TimeHeld)
 {
+	//Commit the ability once created task triggers our callback
 	if (!CommitAbility(AbilityHandle, AbilityActorInfo, AbilityActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 
+	//"perfect release" handling, spawn double the amount of projectiles if we release within 10% of max charge 
 	if (FMath::Abs(ChargeTimeMax - TimeHeld) <= (ChargeTimeMax * 0.1f))
 	{
 		TimeHeld = ChargeTimeMax * 2.0f;
@@ -66,6 +72,7 @@ void UChargedAttackAbility::OnInputReleased(float TimeHeld)
 
 	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = Cast<ATopDownPlayerCharacter>(GetAvatarActorFromActorInfo()))
 	{
+		//Spawn projectiles around the character which triggered the ability, spawning is done in equal increments starting from character's facing direction
 		for (; IncrementIndex < ChargedIncrements; IncrementIndex++)
 		{
 			FRotator RotationAroundCenter = { 0,RotationIncrement * (float)IncrementIndex, 0 };

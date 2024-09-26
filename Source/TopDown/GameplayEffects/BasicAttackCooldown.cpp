@@ -3,6 +3,7 @@
 
 UBasicAttackCooldown::UBasicAttackCooldown()
 {
+	//Setup basic attack cooldown effect
 	DurationPolicy = EGameplayEffectDurationType::HasDuration;
 	DurationMagnitude = { 0.25f };
 

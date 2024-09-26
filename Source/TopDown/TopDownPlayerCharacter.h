@@ -8,6 +8,7 @@
 #include "TopDownCharacter.h"
 #include "TopDownPlayerCharacter.generated.h"
 
+//Expanded version for ATopDownCharacter used for the player
 UCLASS(Blueprintable)
 class ATopDownPlayerCharacter : public ATopDownCharacter
 {
@@ -16,8 +17,6 @@ class ATopDownPlayerCharacter : public ATopDownCharacter
 public:
 	ATopDownPlayerCharacter();
 
-	// Called every frame.
-	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
 
 	/** Returns TopDownCameraComponent subobject **/

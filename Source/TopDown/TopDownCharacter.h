@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "TopDownCharacter.generated.h"
 
+//Basic version of character used for NPCs
 UCLASS(Blueprintable)
 class ATopDownCharacter : public ACharacter, public IAbilitySystemInterface
 {
@@ -16,7 +17,6 @@ public:
 	ATopDownCharacter();
 
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
-
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = GAS, meta = (AllowPrivateAccess = "true"))

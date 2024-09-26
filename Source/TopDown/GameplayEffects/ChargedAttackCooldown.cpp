@@ -3,6 +3,7 @@
 
 UChargedAttackCooldown::UChargedAttackCooldown()
 {
+	//Setup charged attack cooldown effect
 	DurationPolicy = EGameplayEffectDurationType::HasDuration;
 	DurationMagnitude = { 5.0f };
 

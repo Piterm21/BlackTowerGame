@@ -2,14 +2,8 @@
 
 #include "TopDownCharacter.h"
 #include "UObject/ConstructorHelpers.h"
-#include "Camera/CameraComponent.h"
-#include "Components/DecalComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/PlayerController.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Materials/Material.h"
-#include "Engine/World.h"
 #include "AbilitySystemComponent.h"
 #include "Attributes/BasicAttributes.h"
 
@@ -24,8 +18,10 @@ ATopDownCharacter::ATopDownCharacter()
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
+	//Setup ability system component for the character
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
 
+	//Setup default values for attributes
 	ConstructorHelpers::FObjectFinder<UDataTable> ObjectFinder(TEXT("/Game/TopDown/Attributes/BasicAttributesDefaults"));
 	AttributeDefaultsDatatable = ObjectFinder.Object;
 
@@ -43,6 +39,7 @@ void ATopDownCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//Setup basic attributes
 	if (IsValid(AbilitySystemComponent))
 	{
 		BasicAttributes = AbilitySystemComponent->GetSet<UBasicAttributes>();

@@ -3,6 +3,7 @@
 
 UWaitChargedAttackConfirm::UWaitChargedAttackConfirm()
 {
+	//Enable ticking so we can update amount of spawned weapons around the character
 	bTickingTask = true;
 }
 
@@ -13,6 +14,7 @@ void UWaitChargedAttackConfirm::TickTask(float DeltaTime)
 	ChargeTime += DeltaTime;
 	float ChargeTimeForCalculations = ChargeTime;
 
+	//Limit the charge time used for calculations to charge time max, so we don't go over maximum number of increments when displaying feedback for the player
 	if (ChargeTimeForCalculations > ChargeTimeMax)
 	{
 		ChargeTimeForCalculations = ChargeTimeMax;
@@ -22,6 +24,7 @@ void UWaitChargedAttackConfirm::TickTask(float DeltaTime)
 	int ChargedIncrements = ChargeFraction / IncrementSize;
 	float RotationIncrement = 360.0f / (int)ChargedIncrements;
 
+	//If amount of increments changed update amount of components and their position/rotation
 	if (LastChargedIncrements != ChargedIncrements)
 	{
 		int IncrementIndex = 0;
@@ -34,12 +37,14 @@ void UWaitChargedAttackConfirm::TickTask(float DeltaTime)
 				MeshComponent->SetRelativeLocation(RotationAroundCenter.RotateVector({ 50.0f,0,0 }));
 			};
 
+		//Update already spawned components to their new positions
 		for (TObjectPtr<UStaticMeshComponent> SpawnedWeapon : SpawnedWeapons)
 		{
 			SetRotationLocationForMeshComponent(SpawnedWeapon);
 			IncrementIndex++;
 		}
 
+		//Create new components as needed
 		for (; IncrementIndex < ChargedIncrements; IncrementIndex++)
 		{
 			UStaticMeshComponent* NewWeapon = NewObject<UStaticMeshComponent>(Ability->GetAvatarActorFromActorInfo(), FName(FString::Printf(TEXT("StaticMeshComponent_%d"), IncrementIndex)));
@@ -58,6 +63,7 @@ void UWaitChargedAttackConfirm::TickTask(float DeltaTime)
 
 void UWaitChargedAttackConfirm::OnDestroy(bool bInOwnerFinished)
 {
+	//Remove all spawned components on destroy
 	for (TObjectPtr<UStaticMeshComponent> SpawnedWeapon : SpawnedWeapons)
 	{
 		SpawnedWeapon.Get()->DestroyComponent();
@@ -70,6 +76,7 @@ void UWaitChargedAttackConfirm::OnDestroy(bool bInOwnerFinished)
 
 UWaitChargedAttackConfirm* UWaitChargedAttackConfirm::WaitChargedAttackConfirm(class UGameplayAbility* OwningAbility, UStaticMesh* InWeaponMesh, float InChargeTimeMax, float InIncrementCount)
 {
+	//Create and return new instance of the task
 	UWaitChargedAttackConfirm* Task = NewAbilityTask<UWaitChargedAttackConfirm>(OwningAbility);
 	Task->WeaponMesh = InWeaponMesh;
 	Task->ChargeTimeMax = InChargeTimeMax;

@@ -4,6 +4,7 @@
 
 UDamage::UDamage()
 {
+	//Setup damage effect
 	DurationPolicy = EGameplayEffectDurationType::Instant;
 
 	FGameplayModifierInfo ModifierInfo;
