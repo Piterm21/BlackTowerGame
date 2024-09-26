@@ -22,6 +22,8 @@ class ATopDownPlayerController : public APlayerController
 public:
 	ATopDownPlayerController();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	/** Time Threshold to know if it was a short press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float ShortPressThreshold;
@@ -42,6 +44,29 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* SetDestinationTouchAction;
 
+	/** Up Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* UpAction;
+
+	/** Down Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DownAction;
+
+	/** Left Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftAction;
+
+	/** Right Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightAction;
+
+	/** Charge Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ChargeAttackAction;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	class UAbilitySystemComponent* GetAbilitySystemComponent();
+
 protected:
 	/** True if the controlled character should navigate to the mouse cursor. */
 	uint32 bMoveToMouseCursor : 1;
@@ -57,6 +82,16 @@ protected:
 	void OnSetDestinationReleased();
 	void OnTouchTriggered();
 	void OnTouchReleased();
+
+	void OnMoveUp();
+	void OnMoveDown();
+	void OnMoveLeft();
+	void OnMoveRight();
+
+	void OnBasicAttack();
+	void OnChargedAttackStart();
+	void OnChargedAttackTiggered();
+	void OnChargedAttackEnd();
 
 private:
 	FVector CachedDestination;

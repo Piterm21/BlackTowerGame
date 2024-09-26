@@ -11,6 +11,14 @@
 #include "InputActionValue.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayAbilities/BasicAttackAbility.h"
+#include "GameplayAbilities/ChargedAttackAbility.h"
+#include "TopDown/Attacks/BasicAttackProjectileActor.h"
+#include "TopDown/GameplayEffects/Damage.h"
+#include "TopDown/TopDownPlayerCharacter.h"
+
+#pragma optimize( "", off )
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -22,10 +30,40 @@ ATopDownPlayerController::ATopDownPlayerController()
 	FollowTime = 0.f;
 }
 
+void ATopDownPlayerController::Tick(float DeltaSeconds)
+{
+	APawn* const P = GetPawnOrSpectator();
+	if (P)
+	{
+		FVector WorldPos;
+		FVector WorldDirection;
+		DeprojectMousePositionToWorld(WorldPos, WorldDirection);
+		FVector LineEnd = WorldPos + WorldDirection * 50000;
+
+		FVector CurrentLocation = P->GetActorLocation();
+		FVector Intersection = FMath::LinePlaneIntersection(WorldPos, LineEnd, CurrentLocation, { 0,0,1.0f });
+		FRotator3d Rotator = FRotationMatrix::MakeFromX(Intersection - CurrentLocation).Rotator();
+			
+		SetControlRotation(Rotator);
+	}
+}
+
 void ATopDownPlayerController::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+}
+
+UAbilitySystemComponent* ATopDownPlayerController::GetAbilitySystemComponent()
+{
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		return TopDownPlayerCharacter->GetAbilitySystemComponent();
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 void ATopDownPlayerController::SetupInputComponent()
@@ -42,11 +80,16 @@ void ATopDownPlayerController::SetupInputComponent()
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
+		EnhancedInputComponent->BindAction(UpAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveUp);
+		EnhancedInputComponent->BindAction(DownAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveDown);
+		EnhancedInputComponent->BindAction(LeftAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveLeft);
+		EnhancedInputComponent->BindAction(RightAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveRight);
+
 		// Setup mouse input events
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnSetDestinationTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::OnSetDestinationReleased);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Canceled, this, &ATopDownPlayerController::OnSetDestinationReleased);
+		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnBasicAttack);
+
+		EnhancedInputComponent->BindAction(ChargeAttackAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnChargedAttackStart);
+		EnhancedInputComponent->BindAction(ChargeAttackAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::OnChargedAttackEnd);
 
 		// Setup touch input events
 		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnInputStarted);
@@ -93,8 +136,16 @@ void ATopDownPlayerController::OnSetDestinationTriggered()
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn != nullptr)
 	{
-		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
+		//FVector CurrentLocation = ControlledPawn->GetActorLocation();
+
+		//CachedDestination.Z = CurrentLocation.Z;
+
+		//FRotator3d Rotator = FRotationMatrix::MakeFromX(CachedDestination - CurrentLocation).Rotator();
+		//FRotator CurrentRotation = ControlledPawn->GetActorRotation();
+		//FRotator Delta = CurrentRotation - Rotator;
+
+		//SetControlRotation(Rotator);
+		//ControlledPawn->AddActorWorldRotation(WorldDirection, 1.0, false);
 	}
 }
 
@@ -104,8 +155,8 @@ void ATopDownPlayerController::OnSetDestinationReleased()
 	if (FollowTime <= ShortPressThreshold)
 	{
 		// We move there and spawn some particles
-		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
+		//UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
+		//UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
 	}
 
 	FollowTime = 0.f;
@@ -123,3 +174,78 @@ void ATopDownPlayerController::OnTouchReleased()
 	bIsTouch = false;
 	OnSetDestinationReleased();
 }
+
+#define SPEED 10
+
+void ATopDownPlayerController::OnMoveUp()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ SPEED,0,0 });
+	}
+}
+
+void ATopDownPlayerController::OnMoveDown()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ -1 * SPEED,0,0 });
+	}
+}
+
+void ATopDownPlayerController::OnMoveLeft()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ 0, -1 * SPEED,0 });
+	}
+}
+
+void ATopDownPlayerController::OnMoveRight()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ 0, 1 * SPEED,0 });
+	}
+}
+
+void ATopDownPlayerController::OnBasicAttack()
+{
+	if (ATopDownCharacter* TopDownCharacter = (ATopDownCharacter*)GetCharacter())
+	{
+		if (TopDownCharacter->GetAbilitySystemComponent()->TryActivateAbilityByClass(UBasicAttackAbility::StaticClass()))
+		{
+#if WITH_EDITOR && (UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Shooting allowed")));
+#endif
+		}
+		else
+		{
+#if WITH_EDITOR && (UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Shooting blocked")));
+#endif
+		}
+	}
+}
+
+void ATopDownPlayerController::OnChargedAttackStart()
+{
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		TopDownPlayerCharacter->GetAbilitySystemComponent()->AbilityLocalInputPressed(TopDownPlayerCharacter->ChargedAttackAbilityInputID);
+	}
+}
+
+void ATopDownPlayerController::OnChargedAttackEnd()
+{
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		TopDownPlayerCharacter->GetAbilitySystemComponent()->AbilityLocalInputReleased(TopDownPlayerCharacter->ChargedAttackAbilityInputID);
+	}
+}
+
+#pragma optimize( "", on )
