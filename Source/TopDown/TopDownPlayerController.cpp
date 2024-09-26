@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "TopDownPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "TopDownCharacter.h"
@@ -22,6 +20,8 @@ ATopDownPlayerController::ATopDownPlayerController()
 
 void ATopDownPlayerController::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
 	//Rotate character for face the cursor
 	APawn* const P = GetPawnOrSpectator();
 	if (P)
