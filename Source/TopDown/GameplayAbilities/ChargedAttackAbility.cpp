@@ -67,7 +67,7 @@ void UChargedAttackAbility::OnInputReleased(float TimeHeld)
 
 	float ChargeFraction = TimeHeld / ChargeTimeMax;
 	int ChargedIncrements = ChargeFraction / IncrementSize;
-	float RotationIncrement = 360.0f / (int)ChargedIncrements;
+	float RotationIncrement = 360.0f / (float)ChargedIncrements;
 	int IncrementIndex = 0;
 
 	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = Cast<ATopDownPlayerCharacter>(GetAvatarActorFromActorInfo()))
