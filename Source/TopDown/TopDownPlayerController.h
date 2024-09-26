@@ -3,12 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Templates/SubclassOf.h"
 #include "GameFramework/PlayerController.h"
 #include "TopDownPlayerController.generated.h"
 
 /** Forward declaration to improve compiling times */
-class UNiagaraSystem;
 class UInputMappingContext;
 class UInputAction;
 
@@ -22,47 +20,48 @@ class ATopDownPlayerController : public APlayerController
 public:
 	ATopDownPlayerController();
 
-	/** Time Threshold to know if it was a short press */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	float ShortPressThreshold;
-
-	/** FX Class that we will spawn when clicking */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	UNiagaraSystem* FXCursor;
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
-	
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* SetDestinationClickAction;
 
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* SetDestinationTouchAction;
+	/** Up Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* UpAction;
+
+	/** Down Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DownAction;
+
+	/** Left Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftAction;
+
+	/** Right Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightAction;
+
+	/** Basic Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* BasicAttackAction;
+
+	/** Charge Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ChargeAttackAction;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	class UAbilitySystemComponent* GetAbilitySystemComponent();
 
 protected:
-	/** True if the controlled character should navigate to the mouse cursor. */
-	uint32 bMoveToMouseCursor : 1;
-
 	virtual void SetupInputComponent() override;
 	
-	// To add mapping context
-	virtual void BeginPlay();
+	void OnMoveUp();
+	void OnMoveDown();
+	void OnMoveLeft();
+	void OnMoveRight();
 
-	/** Input handlers for SetDestination action. */
-	void OnInputStarted();
-	void OnSetDestinationTriggered();
-	void OnSetDestinationReleased();
-	void OnTouchTriggered();
-	void OnTouchReleased();
-
-private:
-	FVector CachedDestination;
-
-	bool bIsTouch; // Is it a touch device
-	float FollowTime; // For how long it has been pressed
+	void OnBasicAttack();
+	void OnChargedAttackStart();
+	void OnChargedAttackEnd();
 };
-
-

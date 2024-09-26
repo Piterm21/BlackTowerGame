@@ -2,15 +2,15 @@
 
 #include "TopDownPlayerController.h"
 #include "GameFramework/Pawn.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
-#include "NiagaraSystem.h"
-#include "NiagaraFunctionLibrary.h"
 #include "TopDownCharacter.h"
-#include "Engine/World.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayAbilities/BasicAttackAbility.h"
+#include "GameplayAbilities/ChargedAttackAbility.h"
+#include "TopDownPlayerCharacter.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -18,14 +18,37 @@ ATopDownPlayerController::ATopDownPlayerController()
 {
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Default;
-	CachedDestination = FVector::ZeroVector;
-	FollowTime = 0.f;
 }
 
-void ATopDownPlayerController::BeginPlay()
+void ATopDownPlayerController::Tick(float DeltaSeconds)
 {
-	// Call the base class  
-	Super::BeginPlay();
+	//Rotate character for face the cursor
+	APawn* const P = GetPawnOrSpectator();
+	if (P)
+	{
+		FVector WorldPos;
+		FVector WorldDirection;
+		DeprojectMousePositionToWorld(WorldPos, WorldDirection);
+		FVector LineEnd = WorldPos + WorldDirection * 50000;
+
+		FVector CurrentLocation = P->GetActorLocation();
+		FVector Intersection = FMath::LinePlaneIntersection(WorldPos, LineEnd, CurrentLocation, { 0,0,1.0f });
+		FRotator3d Rotator = FRotationMatrix::MakeFromX(Intersection - CurrentLocation).Rotator();
+			
+		SetControlRotation(Rotator);
+	}
+}
+
+UAbilitySystemComponent* ATopDownPlayerController::GetAbilitySystemComponent()
+{
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		return TopDownPlayerCharacter->GetAbilitySystemComponent();
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 void ATopDownPlayerController::SetupInputComponent()
@@ -42,17 +65,16 @@ void ATopDownPlayerController::SetupInputComponent()
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		// Setup mouse input events
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnSetDestinationTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::OnSetDestinationReleased);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Canceled, this, &ATopDownPlayerController::OnSetDestinationReleased);
+		//Movement
+		EnhancedInputComponent->BindAction(UpAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveUp);
+		EnhancedInputComponent->BindAction(DownAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveDown);
+		EnhancedInputComponent->BindAction(LeftAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveLeft);
+		EnhancedInputComponent->BindAction(RightAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnMoveRight);
 
-		// Setup touch input events
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::OnTouchTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::OnTouchReleased);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Canceled, this, &ATopDownPlayerController::OnTouchReleased);
+		//Attacks
+		EnhancedInputComponent->BindAction(BasicAttackAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnBasicAttack);
+		EnhancedInputComponent->BindAction(ChargeAttackAction, ETriggerEvent::Started, this, &ATopDownPlayerController::OnChargedAttackStart);
+		EnhancedInputComponent->BindAction(ChargeAttackAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::OnChargedAttackEnd);
 	}
 	else
 	{
@@ -60,66 +82,76 @@ void ATopDownPlayerController::SetupInputComponent()
 	}
 }
 
-void ATopDownPlayerController::OnInputStarted()
+void ATopDownPlayerController::OnMoveUp()
 {
-	StopMovement();
-}
-
-// Triggered every frame when the input is held down
-void ATopDownPlayerController::OnSetDestinationTriggered()
-{
-	// We flag that the input is being pressed
-	FollowTime += GetWorld()->GetDeltaSeconds();
-	
-	// We look for the location in the world where the player has pressed the input
-	FHitResult Hit;
-	bool bHitSuccessful = false;
-	if (bIsTouch)
-	{
-		bHitSuccessful = GetHitResultUnderFinger(ETouchIndex::Touch1, ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-	else
-	{
-		bHitSuccessful = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-
-	// If we hit a surface, cache the location
-	if (bHitSuccessful)
-	{
-		CachedDestination = Hit.Location;
-	}
-	
-	// Move towards mouse pointer or touch
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn != nullptr)
 	{
-		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
+		ControlledPawn->AddMovementInput({ 1.0f, 0, 0 });
 	}
 }
 
-void ATopDownPlayerController::OnSetDestinationReleased()
+void ATopDownPlayerController::OnMoveDown()
 {
-	// If it was a short press
-	if (FollowTime <= ShortPressThreshold)
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
 	{
-		// We move there and spawn some particles
-		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
+		ControlledPawn->AddMovementInput({ -1.0f, 0, 0 });
 	}
-
-	FollowTime = 0.f;
 }
 
-// Triggered every frame when the input is held down
-void ATopDownPlayerController::OnTouchTriggered()
+void ATopDownPlayerController::OnMoveLeft()
 {
-	bIsTouch = true;
-	OnSetDestinationTriggered();
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ 0, -1.0f, 0 });
+	}
 }
 
-void ATopDownPlayerController::OnTouchReleased()
+void ATopDownPlayerController::OnMoveRight()
 {
-	bIsTouch = false;
-	OnSetDestinationReleased();
+	APawn* ControlledPawn = GetPawn();
+	if (ControlledPawn != nullptr)
+	{
+		ControlledPawn->AddMovementInput({ 0, 1.0f, 0 });
+	}
+}
+
+void ATopDownPlayerController::OnBasicAttack()
+{
+	//Try to trigger basic attack ability
+	if (ATopDownCharacter* TopDownCharacter = (ATopDownCharacter*)GetCharacter())
+	{
+		if (TopDownCharacter->GetAbilitySystemComponent()->TryActivateAbilityByClass(UBasicAttackAbility::StaticClass()))
+		{
+#if WITH_EDITOR && (UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Shooting allowed")));
+#endif
+		}
+		else
+		{
+#if WITH_EDITOR && (UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Shooting blocked")));
+#endif
+		}
+	}
+}
+
+void ATopDownPlayerController::OnChargedAttackStart()
+{
+	//Trigger InputID set for charged attack ability, starting the ability if possible
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		TopDownPlayerCharacter->GetAbilitySystemComponent()->AbilityLocalInputPressed(TopDownPlayerCharacter->ChargedAttackAbilityInputID);
+	}
+}
+
+void ATopDownPlayerController::OnChargedAttackEnd()
+{
+	//Release InputID for charged attack ability, resulting in it's completion
+	if (ATopDownPlayerCharacter* TopDownPlayerCharacter = (ATopDownPlayerCharacter*)GetCharacter())
+	{
+		TopDownPlayerCharacter->GetAbilitySystemComponent()->AbilityLocalInputReleased(TopDownPlayerCharacter->ChargedAttackAbilityInputID);
+	}
 }

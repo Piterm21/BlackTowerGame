@@ -3,6 +3,7 @@
 #include "TopDownGameMode.h"
 #include "TopDownPlayerController.h"
 #include "TopDownCharacter.h"
+#include "GameFramework/HUD.h"
 #include "UObject/ConstructorHelpers.h"
 
 ATopDownGameMode::ATopDownGameMode()
@@ -22,5 +23,12 @@ ATopDownGameMode::ATopDownGameMode()
 	if(PlayerControllerBPClass.Class != NULL)
 	{
 		PlayerControllerClass = PlayerControllerBPClass.Class;
+	}
+
+	//Set HUD to asset
+	static ConstructorHelpers::FClassFinder<AHUD> HUDClassToSet(TEXT("/Game/TopDown/Blueprints/BP_HUD"));
+	if (HUDClassToSet.Class != nullptr)
+	{
+		HUDClass = HUDClassToSet.Class;
 	}
 }

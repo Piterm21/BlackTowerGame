@@ -2,24 +2,15 @@
 
 #include "TopDownCharacter.h"
 #include "UObject/ConstructorHelpers.h"
-#include "Camera/CameraComponent.h"
-#include "Components/DecalComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/PlayerController.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Materials/Material.h"
-#include "Engine/World.h"
+#include "AbilitySystemComponent.h"
+#include "Attributes/BasicAttributes.h"
 
 ATopDownCharacter::ATopDownCharacter()
 {
-	// Set size for player capsule
+	// Set size capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-
-	// Don't rotate character to camera direction
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
 
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Rotate character to moving direction
@@ -27,25 +18,30 @@ ATopDownCharacter::ATopDownCharacter()
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
-	// Create a camera boom...
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
-	CameraBoom->TargetArmLength = 800.f;
-	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
-	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
+	//Setup ability system component for the character
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
 
-	// Create a camera...
-	TopDownCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
-	TopDownCameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	TopDownCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	//Setup default values for attributes
+	ConstructorHelpers::FObjectFinder<UDataTable> ObjectFinder(TEXT("/Game/TopDown/Attributes/BasicAttributesDefaults"));
+	AttributeDefaultsDatatable = ObjectFinder.Object;
 
-	// Activate ticking in order to update the cursor every frame.
-	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = true;
+	if (IsValid(AbilitySystemComponent))
+	{
+		FAttributeDefaults Defaults;
+		Defaults.Attributes = UBasicAttributes::StaticClass();
+		Defaults.DefaultStartingTable = AttributeDefaultsDatatable;
+
+		AbilitySystemComponent->DefaultStartingData.Add(Defaults);
+	}
 }
 
-void ATopDownCharacter::Tick(float DeltaSeconds)
+void ATopDownCharacter::BeginPlay()
 {
-    Super::Tick(DeltaSeconds);
+	Super::BeginPlay();
+
+	//Setup basic attributes
+	if (IsValid(AbilitySystemComponent))
+	{
+		BasicAttributes = AbilitySystemComponent->GetSet<UBasicAttributes>();
+	}
 }
